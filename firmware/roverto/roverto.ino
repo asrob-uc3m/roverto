@@ -33,8 +33,8 @@ void loop() {
   digitalWrite(m1_pwm1, LOW);
   analogWrite(m1_pwm2, 190);
 
-  digitalWrite(m2_in1, HIGH);
-  digitalWrite(m2_in2, LOW);
+  digitalWrite(m2_in1, LOW);
+  digitalWrite(m2_in2, HIGH);
   analogWrite(m2_pwm2, 190);
   
   digitalWrite(enable, LOW);
