@@ -17,6 +17,22 @@ static const int enable = 5;
 
 IBusBM IBus; // IBus object
 
+//-- Speed limit
+static const int lower_speed_limit = 120;
+
+//#define PARENTAL_CONTROL
+#ifdef PARENTAL_CONTROL
+static const int upper_speed_limit = lower_speed_limit;
+#else
+static const int upper_speed_limit = 255;
+#endif
+
+#define FAILSAFE
+#ifdef FAILSAFE
+static const int FAILSAFE_CHANNEL = 3; //-- Starts at 0
+static const int FAILSAFE_VALUE = -1;
+#endif
+
 /*
   move - move the robot
   v -> linear velocity
@@ -34,7 +50,7 @@ void move(int v, int w)
     //-- Set left motor
     if (r_speed > 0)
     {
-      r_speed = map(r_speed, 1, 255, 190, 255); //-- Motor range is 190-255, convert to that range
+      r_speed = map(r_speed, 1, 255, lower_speed_limit, upper_speed_limit);
       digitalWrite(m1_in1, HIGH);
       digitalWrite(m1_in2, LOW);
       digitalWrite(m1_pwm1, LOW); //-- To be removed
@@ -42,7 +58,7 @@ void move(int v, int w)
     }
     else if (r_speed < 0)
     {
-      r_speed = map(r_speed, -255, -1, 190, 255); //-- Motor range is 190-255, convert to that range
+      r_speed = map(r_speed, -255, -1, lower_speed_limit, upper_speed_limit);
       digitalWrite(m1_in1, LOW);
       digitalWrite(m1_in2, HIGH);
       digitalWrite(m1_pwm1, LOW); //-- To be removed
@@ -59,14 +75,14 @@ void move(int v, int w)
     //-- Set right motor
     if (l_speed > 0)
     {
-      l_speed = map(l_speed, 1, 255, 190, 255); //-- Motor range is 190-255, convert to that range
+      l_speed = map(l_speed, 1, 255, lower_speed_limit, upper_speed_limit);
       digitalWrite(m2_in1, LOW);
       digitalWrite(m2_in2, HIGH);
       analogWrite(m2_pwm2, l_speed);
     }
     else if (l_speed < 0)
     {
-      l_speed = map(l_speed, -255, -1, 190, 255); //-- Motor range is 190-255, convert to that range
+      l_speed = map(l_speed, -255, -1, lower_speed_limit, upper_speed_limit);
       digitalWrite(m2_in1, HIGH);
       digitalWrite(m2_in2, LOW);
       analogWrite(m2_pwm2, l_speed);
@@ -103,13 +119,25 @@ void setup()
 
 void loop()
 {
-  float speed, dir;
+  float speed=0, dir=0;
+  int failsafe=0;
   dir = (((int)IBus.readChannel(0))-1500)/500.0;
   speed = (((int)IBus.readChannel(1))-1500)/500.0;
+  failsafe = (((int)IBus.readChannel(FAILSAFE_CHANNEL))-1500)/500.0;
   Serial.print(speed);
   Serial.print(" ");
-  Serial.println(dir);
+  Serial.print(dir);
+  Serial.print(" ");
+  Serial.println(failsafe);
 
-  move(speed*255, dir*255);
+  if (failsafe==FAILSAFE_VALUE)
+  {
+    move(speed*255, dir*255);
+  }
+  else
+  {
+    move(0, 0);
+  }
+  
   delay(20);
 }
