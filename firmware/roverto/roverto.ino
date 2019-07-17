@@ -1,6 +1,10 @@
 //-- Roverto
 //--------------------------------------
-//#include <IBusBM.h>
+#include <IBusBM.h>
+
+//Min value of signal to start tx control
+#define TX_THRESHOLD 0.2
+
 
 //-- H-bridge pins
 static const int m1_in1 = 2;
@@ -14,13 +18,14 @@ static const int m2_pwm2 = 9;
 
 static const int enable = 5;
 
-//IBusBM IBus; // IBus object
+
+IBusBM IBus; // IBus object
 
 /*
   move - move the robot
- v -> linear velocity
- w -> angular velocity
- */
+  v -> linear velocity
+  w -> angular velocity
+*/
 void move(int v, int w)
 {
   //-- Compute left and right wheel speeds
@@ -78,6 +83,9 @@ void move(int v, int w)
   }
 }
 
+bool rpi_control;
+
+
 void setup()
 {
   // Configure motor pins
@@ -95,55 +103,57 @@ void setup()
 
   // Start RC receiver
   Serial1.begin(9600);
-  //  IBus.begin(Serial1);
+  IBus.begin(Serial1);
   //start rpi receiver
   Serial.begin(57600);
-}
 
-String input;
+  rpi_control = true;
+  delay(5000);
+}
 
 void loop()
 {
 
-/*  float speed, dir;
-   dir = (((int)IBus.readChannel(0))-1500)/500.0;
-   speed = (((int)IBus.readChannel(1))-1500)/500.0;
-   Serial.print(speed);
-   Serial.print(" ");
-   Serial.println(dir);
-   
-   move(speed*255, dir*255);
-   delay(20);*/
+  float speed, dir;
+  dir = (((int)IBus.readChannel(0)) - 1500) / 500.0;
+  speed = (((int)IBus.readChannel(1)) - 1500) / 500.0;
+  if (speed > 0.2 || speed < -0.2 || dir < -0.2 || dir > 0.2) {
+    rpi_control = false;
+    Serial.print("rpi control ended");
+  }
+  if (rpi_control) {
+    if (Serial.available()) {
+      delay(10);
+      Serial.println("START");
+      //COMMAND FORMAT,VALUES BETWEEN -100 AND 100
+      //V20 W30
 
-  if (Serial.available()){
-    //COMMAND FORMAT
-    //V20 W30
-    input = Serial.readStringUntil('\n');
-    int velIn = input.indexOf('V');
-    int velEn = input.indexOf(' ');
-    String vel = input.substring(velIn + 1,velEn);
-    int dirIn = input.indexOf('W');
-    String dir = input.substring(dirIn + 1);
-    move(vel.toInt(),dir.toInt());
-   /* Serial.print("speed ");
-    Serial.print(vel.toInt());
-    Serial.print("\tdirection");
-    Serial.println(dir.toInt());*/
-    
-    //********************Convivencia Raspberry-emisora********************
-    
-  }    
+      char command[12];
+      command [0] = Serial.read();
+      int i = 0;
+      while (command[i] != ';' && i < 12 && Serial.available()) {
+        i++;
+        command [i] = Serial.read();
+      }
+
+      String input(command);
+      int velIn = input.indexOf('V');
+      int velEn = input.indexOf(' ');
+      String vel = input.substring(velIn + 1, velEn);
+      int dirIn = input.indexOf('W');
+      int dirEn = input.indexOf(';');
+      String dir = input.substring(dirIn + 1, dirEn);
+      Serial.print("VEL: ");
+      Serial.print(vel);
+      Serial.print(" DIR: ");
+      Serial.println(dir);
+
+      //move(vel.toInt(), dir.toInt());
+    }
+  }
+  else {
+    //move(speed * 255, dir * 255);
+  }
+
   delay(1);
 }
-
-
-
-
-
-
-
-
-
-
-
-
